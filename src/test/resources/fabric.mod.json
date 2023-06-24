@@ -1,0 +1,26 @@
+{
+	"schemaVersion": 1,
+	"id": "spasm-test",
+	"version": "1.0.0",
+	"name": "SpASM Test",
+	"description": "SpASM test.",
+	"authors": [
+		"mine_diver"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/mineLdiver/SpASM",
+		"issues": "https://github.com/mineLdiver/SpASM/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/spasm-test/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"spasm:transformer": [
+			"net.mine_diver.spasm.test.TestTransformer"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.14.21"
+	}
+}
