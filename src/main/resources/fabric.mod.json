@@ -17,8 +17,5 @@
 	"environment": "*",
 	"mixins": [
       "spasm.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=0.14.19"
-	}
+	]
 }
