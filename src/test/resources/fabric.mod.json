@@ -18,6 +18,9 @@
 	"entrypoints": {
 		"spasm:transformer": [
 			"net.mine_diver.spasm.test.TestTransformer"
+		],
+		"spasm:raw_transformer": [
+			"net.mine_diver.spasm.test.TestRawTransformer"
 		]
 	},
 	"depends": {

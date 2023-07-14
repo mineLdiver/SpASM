@@ -1,13 +1,9 @@
 package net.mine_diver.spasm.impl;
 
-import com.google.common.collect.ImmutableList;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.val;
-import lombok.var;
-import net.mine_diver.spasm.api.transform.ClassTransformer;
 import net.mine_diver.spasm.api.transform.TransformationResult;
-import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
@@ -15,36 +11,38 @@ import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
 import org.spongepowered.asm.transformers.TreeTransformer;
 
 import static net.mine_diver.spasm.api.transform.TransformationResult.PASS;
-import static net.mine_diver.spasm.impl.util.FuncUtil.*;
-import static net.mine_diver.spasm.impl.util.Util.*;
+import static net.mine_diver.spasm.impl.SpASM.RAW_TRANSFORMERS;
+import static net.mine_diver.spasm.impl.SpASM.TRANSFORMERS;
 
 @FieldDefaults(
         level = AccessLevel.PRIVATE,
         makeFinal = true
 )
 class MixinTransformerHook<T extends TreeTransformer & IMixinTransformer> extends MixinTransformerDelegate<T> {
-    @NotNull ImmutableList<ClassTransformer> transformers;
-
-    MixinTransformerHook(final @NotNull T delegate, final @NotNull ImmutableList<ClassTransformer> transformers) {
+    MixinTransformerHook(T delegate) {
         super(delegate);
-        this.transformers = transformers;
     }
 
     @Override
     public byte[] transformClassBytes(String name, String transformedName, byte[] basicClass) {
-        var transformedClass = basicClass;
         if (basicClass != null && !name.startsWith("org.objectweb.asm.") && !name.startsWith("net.mine_diver.spasm.")) {
-            val classNode = make(new ClassNode(), classNode1 -> new ClassReader(basicClass).accept(classNode1, 0));
-            switch (transformers.stream()
-                    .map($__(ClassTransformer::transform, Thread.currentThread().getContextClassLoader(), classNode))
+            val classLoader = Thread.currentThread().getContextClassLoader();
+            for (int i = 0; i < RAW_TRANSFORMERS.size(); i++) {
+                val transformationResult = RAW_TRANSFORMERS.get(i).transform(classLoader, name, basicClass);
+                if (transformationResult.isPresent()) basicClass = transformationResult.get();
+            }
+            val classNode = new ClassNode();
+            new ClassReader(basicClass).accept(classNode, 0);
+            switch (TRANSFORMERS.stream()
+                    .map(classTransformer -> classTransformer.transform(classLoader, classNode))
                     .reduce(PASS, TransformationResult::choose)) {
                 case SUCCESS:
-                    ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+                    val classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
                     classNode.accept(classWriter);
-                    transformedClass = classWriter.toByteArray();
+                    basicClass = classWriter.toByteArray();
                     break;
             }
         }
-        return super.transformClassBytes(name, transformedName, transformedClass);
+        return super.transformClassBytes(name, transformedName, basicClass);
     }
 }
