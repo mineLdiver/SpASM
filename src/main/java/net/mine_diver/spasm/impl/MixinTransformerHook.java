@@ -25,7 +25,7 @@ class MixinTransformerHook<T extends TreeTransformer & IMixinTransformer> extend
 
     @Override
     public byte[] transformClassBytes(String name, String transformedName, byte[] basicClass) {
-        if (basicClass != null && !name.startsWith("org.objectweb.asm.") && !name.startsWith("net.mine_diver.spasm.")) {
+        if (basicClass != null && !name.startsWith("org.objectweb.asm.") && !name.startsWith("net.mine_diver.spasm.") && !name.startsWith("com.google.common.")) {
             val classLoader = Thread.currentThread().getContextClassLoader();
             for (int i = 0; i < RAW_TRANSFORMERS.size(); i++) {
                 val transformationResult = RAW_TRANSFORMERS.get(i).transform(classLoader, name, basicClass);
