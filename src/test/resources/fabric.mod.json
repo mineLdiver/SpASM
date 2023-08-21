@@ -20,7 +20,8 @@
 			"net.mine_diver.spasm.test.TestTransformer"
 		],
 		"spasm:raw_transformer": [
-			"net.mine_diver.spasm.test.TestRawTransformer"
+			"net.mine_diver.spasm.test.TestRawTransformer",
+			"net.mine_diver.spasm.test.AllPhaseTransformer"
 		]
 	},
 	"depends": {

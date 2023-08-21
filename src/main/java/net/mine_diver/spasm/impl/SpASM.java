@@ -5,6 +5,7 @@ import lombok.val;
 import net.fabricmc.loader.api.FabricLoader;
 import net.mine_diver.spasm.api.transform.ClassTransformer;
 import net.mine_diver.spasm.api.transform.RawClassTransformer;
+import net.mine_diver.spasm.api.transform.TransformationPhase;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
@@ -18,6 +19,7 @@ import java.util.Set;
 public class SpASM implements IMixinConfigPlugin {
     static final ImmutableList<ClassTransformer> TRANSFORMERS = entrypoint("transformer", ClassTransformer.class);
     static final ImmutableList<RawClassTransformer> RAW_TRANSFORMERS = entrypoint("raw_transformer", RawClassTransformer.class);
+    static TransformationPhase currentPhase;
 
     static {
         try {
@@ -40,6 +42,10 @@ public class SpASM implements IMixinConfigPlugin {
         mixinTransformerField.setAccessible(true);
         //noinspection unchecked
         mixinTransformerField.set(knotClassDelegate, new MixinTransformerHook<>((T) mixinTransformerField.get(knotClassDelegate)));
+    }
+
+    public static TransformationPhase getCurrentPhase() {
+        return currentPhase;
     }
 
     @Override

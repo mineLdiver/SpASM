@@ -4,6 +4,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
-public interface RawClassTransformer {
+public interface RawClassTransformer extends PhaseListener {
     @NotNull Optional<byte[]> transform(final @NotNull ClassLoader classLoader, final @NotNull String className, final byte @NotNull [] classBytes);
 }

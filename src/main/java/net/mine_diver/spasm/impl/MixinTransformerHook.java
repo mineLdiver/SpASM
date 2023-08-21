@@ -3,6 +3,7 @@ package net.mine_diver.spasm.impl;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.val;
+import net.mine_diver.spasm.api.transform.TransformationPhase;
 import net.mine_diver.spasm.api.transform.TransformationResult;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -25,24 +26,39 @@ class MixinTransformerHook<T extends TreeTransformer & IMixinTransformer> extend
 
     @Override
     public byte[] transformClassBytes(String name, String transformedName, byte[] basicClass) {
-        if (basicClass != null && !name.startsWith("org.objectweb.asm.") && !name.startsWith("net.mine_diver.spasm.") && !name.startsWith("com.google.common.")) {
-            val classLoader = Thread.currentThread().getContextClassLoader();
-            for (int i = 0; i < RAW_TRANSFORMERS.size(); i++) {
-                val transformationResult = RAW_TRANSFORMERS.get(i).transform(classLoader, name, basicClass);
-                if (transformationResult.isPresent()) basicClass = transformationResult.get();
-            }
-            val classNode = new ClassNode();
-            new ClassReader(basicClass).accept(classNode, 0);
-            switch (TRANSFORMERS.stream()
-                    .map(classTransformer -> classTransformer.transform(classLoader, classNode))
-                    .reduce(PASS, TransformationResult::choose)) {
-                case SUCCESS:
-                    val classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-                    classNode.accept(classWriter);
-                    basicClass = classWriter.toByteArray();
-                    break;
-            }
+        if (shouldSkip(name, basicClass)) return super.transformClassBytes(name, transformedName, basicClass);
+        val classLoader = Thread.currentThread().getContextClassLoader();
+        basicClass = transform(name, basicClass, classLoader, TransformationPhase.BEFORE_MIXINS);
+        basicClass = super.transformClassBytes(name, transformedName, basicClass);
+        basicClass = transform(name, basicClass, classLoader, TransformationPhase.AFTER_MIXINS);
+        return basicClass;
+    }
+
+    private static boolean shouldSkip(String name, byte[] basicClass) {
+        return basicClass == null || name.startsWith("org.objectweb.asm.") || name.startsWith("net.mine_diver.spasm.") || name.startsWith("com.google.common.");
+    }
+
+    private static byte[] transform(String name, byte[] basicClass, ClassLoader classLoader, TransformationPhase phase) {
+        SpASM.currentPhase = phase;
+        for (int i = 0; i < RAW_TRANSFORMERS.size(); i++) {
+            val transformer = RAW_TRANSFORMERS.get(i);
+            if (!transformer.getPhases().contains(phase)) continue;
+            val transformationResult = transformer.transform(classLoader, name, basicClass);
+            if (transformationResult.isPresent()) basicClass = transformationResult.get();
         }
-        return super.transformClassBytes(name, transformedName, basicClass);
+        val classNode = new ClassNode();
+        new ClassReader(basicClass).accept(classNode, 0);
+        switch (TRANSFORMERS.stream()
+                .filter(transformer -> transformer.getPhases().contains(phase))
+                .map(classTransformer -> classTransformer.transform(classLoader, classNode))
+                .reduce(PASS, TransformationResult::choose)) {
+            case SUCCESS:
+                val classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+                classNode.accept(classWriter);
+                basicClass = classWriter.toByteArray();
+                break;
+        }
+        SpASM.currentPhase = null;
+        return basicClass;
     }
 }
