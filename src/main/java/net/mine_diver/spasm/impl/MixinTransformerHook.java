@@ -24,7 +24,7 @@ import static net.mine_diver.spasm.impl.SpASM.TRANSFORMERS;
         makeFinal = true
 )
 class MixinTransformerHook<T extends TreeTransformer & IMixinTransformer> extends MixinTransformerDelegate<T> {
-    Deque<String> transformationStack = new ArrayDeque<>();
+    ThreadLocal<Deque<String>> transformationStack = ThreadLocal.withInitial(ArrayDeque::new);
 
     MixinTransformerHook(T delegate) {
         super(delegate);
@@ -32,13 +32,14 @@ class MixinTransformerHook<T extends TreeTransformer & IMixinTransformer> extend
 
     @Override
     public byte[] transformClassBytes(String name, String transformedName, byte[] basicClass) {
-        if (basicClass == null || Objects.equals(transformationStack.peek(), name)) return super.transformClassBytes(name, transformedName, basicClass);
-        transformationStack.push(name);
+        val stack = transformationStack.get();
+        if (basicClass == null || Objects.equals(stack.peek(), name)) return super.transformClassBytes(name, transformedName, basicClass);
+        stack.push(name);
         val classLoader = Thread.currentThread().getContextClassLoader();
         basicClass = transform(name, basicClass, classLoader, TransformationPhase.BEFORE_MIXINS);
         basicClass = super.transformClassBytes(name, transformedName, basicClass);
         basicClass = transform(name, basicClass, classLoader, TransformationPhase.AFTER_MIXINS);
-        transformationStack.pop();
+        stack.pop();
         return basicClass;
     }
 
